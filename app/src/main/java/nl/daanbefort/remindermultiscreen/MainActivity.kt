@@ -3,7 +3,6 @@ package nl.daanbefort.remindermultiscreen
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
@@ -13,7 +12,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.content_add.*
 import kotlinx.android.synthetic.main.content_main.*
 
 const val ADD_REMINDER_REQUEST_CODE = 100
@@ -21,13 +19,15 @@ const val ADD_REMINDER_REQUEST_CODE = 100
 class MainActivity : AppCompatActivity() {
     private val reminders = arrayListOf<Reminder>()
     private val reminderAdapter = ReminderAdapter(reminders)
+    private lateinit var reminderRepository: ReminderRepository
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-
+        reminderRepository = ReminderRepository(this)
         fab.setOnClickListener { startAddActivity() }
 
         initViews()
@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initViews() {
         // Initialize the recycler view with a linear layout manager, adapter
+        getRemindersFromDatabase()
         rvReminders.layoutManager = LinearLayoutManager(this@MainActivity, RecyclerView.VERTICAL, false)
         rvReminders.adapter = reminderAdapter
         rvReminders.addItemDecoration(DividerItemDecoration(this@MainActivity, DividerItemDecoration.VERTICAL))
@@ -84,6 +85,11 @@ class MainActivity : AppCompatActivity() {
                 val position = viewHolder.adapterPosition
                 reminders.removeAt(position)
                 reminderAdapter.notifyDataSetChanged()
+
+                val reminderToDelete = reminders[position]
+                reminderRepository.deleteReminder(reminderToDelete)
+                getRemindersFromDatabase()
+
             }
         }
         return ItemTouchHelper(callback)
@@ -102,9 +108,19 @@ class MainActivity : AppCompatActivity() {
                     val reminder = data!!.getParcelableExtra<Reminder>(EXTRA_REMINDER)
                     reminders.add(reminder)
                     reminderAdapter.notifyDataSetChanged()
+                    reminderRepository.insertReminder(reminder)
+                    getRemindersFromDatabase()
                 }
             }
         }
     }
+
+    private fun getRemindersFromDatabase() {
+        val reminders = reminderRepository.getAllReminders()
+        this@MainActivity.reminders.clear()
+        this@MainActivity.reminders.addAll(reminders)
+        reminderAdapter.notifyDataSetChanged()
+    }
+
 
 }
